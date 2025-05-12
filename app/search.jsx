@@ -1,29 +1,68 @@
 import React, { useState, useContext } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  Image,
+  StyleSheet,
+  FlatList,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { DeckContext } from "../src/context/DeckContext";
+import axios from "axios";
 
 export default function SearchScreen() {
   const router = useRouter();
   const { deckId } = useLocalSearchParams();
   const { addCardToDeck } = useContext(DeckContext);
-  const [searchText, setSearchText] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
 
-  //not a real search until API is re-added
+  const [searchText, setSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const handleSearch = async () => {
-    const fakeCardData = { name: searchText, id: Date.now().toString() };
-    setSearchResult(fakeCardData);
+    if (!searchText) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get(
+        "https://api.magicthegathering.io/v1/cards",
+        {
+          params: { name: searchText },
+        }
+      );
+
+      //console.log("fetch repsonse", response);
+
+      const data = response.data;
+
+      if (data.cards && data.cards.length > 0) {
+        setSearchResults(data.cards);
+      } else {
+        throw new Error("There was a problem finding searched cards.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setSearchResults(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddCard = () => {
-    if (deckId && searchResult) {
-      addCardToDeck(deckId, searchResult);
+  const handleAddCard = (card) => {
+    if (deckId && card) {
+      addCardToDeck(deckId, card);
+      router.push(`./cardlist?deckId=${deckId}`);
     }
   };
 
   return (
     <View style={styles.container}>
+      {/*Search input field for card finder*/}
       <Text style={styles.title}>Search for a Card:</Text>
       <TextInput
         style={styles.input}
@@ -31,14 +70,30 @@ export default function SearchScreen() {
         value={searchText}
         onChangeText={setSearchText}
       />
-      {/* This button will eventually trigger an API search */}
       <Button title="Search" onPress={handleSearch} />
-      {searchResult && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultText}>Result: {searchResult.name}</Text>
-          <Button title="Add Card To Deck" onPress={handleAddCard} />
-        </View>
+
+      {/*display field for cards found*/}
+      {searchResults.length && !loading && (
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item, index) =>
+            item.id ? item.id.toString() : index.toString()
+          }
+          renderItem={({ item }) => (
+            <View style={styles.resultsContainer}>
+              <Text style={styles.resultsText}>Results: {item.name}</Text>
+              {item.imageUrl && (
+                <Image
+                  style={{ width: 220, height: 300, marginVertical: 10 }}
+                  source={{ uri: item.imageUrl }}
+                />
+              )}
+              <Button title="Add Card To Deck" onPress={handleAddCard} />
+            </View>
+          )}
+        />
       )}
+      {/*Back navigation*/}
       <Button
         title="Back to card list"
         onPress={() => router.push(`./cardlist?deckId=${deckId}`)}
@@ -65,11 +120,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 10,
   },
-  resultContainer: {
+  resultsContainer: {
     marginVertical: 20,
     alignItems: "center",
   },
-  resultText: {
+  resultsText: {
     fontSize: 16,
     marginBottom: 10,
   },
