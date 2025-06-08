@@ -6,6 +6,7 @@ import {
   Button,
   Image,
   StyleSheet,
+  ActivityIndicator,
   FlatList,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -22,6 +23,7 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  //fetch from gatherer API
   const handleSearch = async () => {
     if (!searchText) return;
     setLoading(true);
@@ -36,9 +38,9 @@ export default function SearchScreen() {
       );
 
       //console.log("fetch repsonse", response);
-
       const data = response.data;
 
+      //if something did come back from the response but the data is bad, throw error
       if (data.cards && data.cards.length > 0) {
         setSearchResults(data.cards);
       } else {
@@ -62,7 +64,7 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      {/*Search input field for card finder*/}
+      {/*Search input field for card*/}
       <Text style={styles.title}>Search for a Card:</Text>
       <TextInput
         style={styles.input}
@@ -71,6 +73,15 @@ export default function SearchScreen() {
         onChangeText={setSearchText}
       />
       <Button title="Search" onPress={handleSearch} />
+
+      {loading && (
+        <ActivityIndicator
+          size="large"
+          color="#0000ff"
+          style={{ marginVertical: 20 }}
+        />
+      )}
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
       {/*display field for cards found*/}
       {searchResults.length && !loading && (
@@ -88,7 +99,7 @@ export default function SearchScreen() {
                   source={{ uri: item.imageUrl }}
                 />
               )}
-              <Button title="Add Card To Deck" onPress={handleAddCard} />
+              <Button title="Add Card" onPress={() => handleAddCard(item)} />
             </View>
           )}
         />

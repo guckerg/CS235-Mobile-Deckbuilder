@@ -8,7 +8,6 @@ export default function CardListScreen() {
   const { deckId } = useLocalSearchParams();
   const { decks } = useContext(DeckContext);
 
-  // Find the deck with the matching deckId; default to empty array if not found.
   const deck = decks.find((d) => d.id === deckId) || {
     name: "Unknown Deck",
     cards: [],
@@ -19,8 +18,18 @@ export default function CardListScreen() {
       <Text style={styles.title}>Cards in {deck.name}</Text>
       <FlatList
         data={deck.cards}
-        renderItem={({ item }) => <Text style={styles.item}>{item.name}</Text>}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item, index) =>
+          item.id ? item.id.toString() : index.toString()
+        }
+        renderItem={({ item }) => (
+          <View style={styles.cardContainer}>
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            <Button
+              title="Remove"
+              onPress={() => removeCardFromDeck(deckId, item.id)}
+            />
+          </View>
+        )}
         ListEmptyComponent={<Text>No Cards Added Yet.</Text>}
       />
       <Button
